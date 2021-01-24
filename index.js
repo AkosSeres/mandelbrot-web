@@ -7,8 +7,28 @@ const rShader = `
 precision highp float;
 uniform vec2 resolution;
 
+void iterateMandelbrot(inout float r, inout float i, float startR, float startI);
+
 void main() {
-    gl_FragColor = vec4((gl_FragCoord.xy / resolution), 0, 1);
+    float realStart = (2.0 * gl_FragCoord.x / resolution.x) - 1.5;
+    float imStart = -(2.0 * gl_FragCoord.y / resolution.y) + 1.0;
+    float real = 0.0;
+    float imaginary = 0.0;
+    for(int i = 0; i <= 50; i++) { iterateMandelbrot(real, imaginary, realStart, imStart); }
+
+    float absSq = real * real + imaginary * imaginary;
+    float brightness = absSq / 50.0;
+    if(absSq < 50.0){
+        brightness = 1.0;
+    }
+
+    gl_FragColor = vec4(brightness, brightness, brightness, 1);
+}
+
+void iterateMandelbrot(inout float r, inout float i, float startR, float startI){
+    float oldR = r;
+    r = r * r - i * i + startR;
+    i = 2.0 * oldR * i + startI;
 }
 `;
 
@@ -20,6 +40,9 @@ gl.compileShader(vertexShader);
 const renderShader = gl.createShader(gl.FRAGMENT_SHADER);
 gl.shaderSource(renderShader, rShader);
 gl.compileShader(renderShader);
+if (!gl.getShaderParameter(renderShader, gl.COMPILE_STATUS)) {
+  throw new Error(`An error occurred compiling the render shader: ${gl.getShaderInfoLog(renderShader)}`);
+}
 
 // Link into program
 const shaderProgram = gl.createProgram();
