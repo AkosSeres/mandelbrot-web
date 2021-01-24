@@ -12,12 +12,13 @@
 
 <body>
     <canvas id="mainCanvas" width="500" height="500"></canvas>
-    <script id="rendererShader" type="x-shader/x-fragment">
+    <script id="vShader" type="x-shader/x-vertex">
+        attribute vec4 aVertexPosition;
         void main() {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            gl_Position = aVertexPosition;
         }
     </script>
-    <script src="index.js"></script>
+    <script src="index.js" defer></script>
 </body>
 
 </html>
