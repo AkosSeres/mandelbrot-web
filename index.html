@@ -8,10 +8,21 @@
     <meta name="keywords" content="JavaScript, Mandelbrot, Web">
     <meta name="author" content="Akos Seres">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0px;
+            padding: 0px;
+            overflow: hidden;
+        }
+        canvas {
+            margin: 0px;
+            padding: 0px;
+        }
+    </style>
 </head>
 
 <body>
-    <canvas id="mainCanvas" width="500" height="500"></canvas>
+    <canvas id="mainCanvas"></canvas>
     <script id="vShader" type="x-shader/x-vertex">
         attribute vec4 aVertexPosition;
         void main() {
