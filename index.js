@@ -1,3 +1,8 @@
+const iterations = 50;
+const scaling = 1;
+const offsetX = 0;
+const offsetY = 0;
+
 /* eslint-disable no-bitwise */
 const cnv = document.getElementById('mainCanvas');
 /** @type {WebGLRenderingContext} */
@@ -6,16 +11,18 @@ const gl = cnv.getContext('webgl');
 const rShader = `
 precision highp float;
 uniform vec2 resolution;
+uniform float scaling;
+uniform vec2 offsets;
 
 void iterateMandelbrot(inout float r, inout float i, float startR, float startI);
 
 void main() {
-    float unit = min(resolution.x, resolution.y);
-    float realStart = (2.0 * gl_FragCoord.x / unit) - 1.5;
-    float imStart = -(2.0 * gl_FragCoord.y / unit) + 1.0;
+    float unit = min(resolution.x / 1.3, resolution.y / 1.1);
+    float realStart = ((2.0 * gl_FragCoord.x / unit) - 2.0) / scaling + offsets.x;
+    float imStart = (-(2.0 * gl_FragCoord.y / unit) + 1.1) / scaling - offsets.y;
     float real = 0.0;
     float imaginary = 0.0;
-    for(int i = 0; i <= 50; i++) { iterateMandelbrot(real, imaginary, realStart, imStart); }
+    for(int i = 0; i <= ${iterations}; i++) { iterateMandelbrot(real, imaginary, realStart, imStart); }
 
     float absSq = real * real + imaginary * imaginary;
     float brightness = absSq / 50.0;
@@ -57,6 +64,8 @@ if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
 
 // Get locations
 const resolutionLocation = gl.getUniformLocation(shaderProgram, 'resolution');
+const scalingLocation = gl.getUniformLocation(shaderProgram, 'scaling');
+const offsetsLocation = gl.getUniformLocation(shaderProgram, 'offsets');
 
 function createVertexBuffer() {
   const buffer = gl.createBuffer();
@@ -92,6 +101,8 @@ function render() {
   const offset = 0;
   const vertexCount = 4;
   gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
+  gl.uniform1f(scalingLocation, scaling);
+  gl.uniform2f(offsetsLocation, offsetX, offsetY);
   gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertexCount);
 }
 
