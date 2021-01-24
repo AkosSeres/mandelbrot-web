@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mandelbrot viewer</title>
+</head>
+
+<body>
+    <canvas id="mainCanvas" width="500" height="500"></canvas>
+    <script id="rendererShader" type="x-shader/x-fragment">
+        void main() {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        }
+    </script>
+    <script src="index.js"></script>
+</body>
+
+</html>
