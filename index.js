@@ -72,10 +72,25 @@ class MandelbrotRenderer {
   }
 
   setCanvasSize() {
+    // Set canvas size and scale according to the device pixel ratio
     const dpr = window.devicePixelRatio || 1;
     this.gl.canvas.width = window.innerWidth * dpr;
     this.gl.canvas.height = window.innerHeight * dpr;
     this.gl.viewport(0, 0, this.gl.canvas.width * dpr, this.gl.canvas.height * dpr);
+
+    // Set offsets that the MB set is in the middle of the screen
+    if (this.scaling === 1) {
+      const w = (this.gl.canvas.width) / 1.3;
+      const h = (this.gl.canvas.height) / 1.1;
+      const unit = Math.min(w, h);
+      if (w >= h) {
+        this.offsetX = -(w - h) / unit;
+        this.offsetY = 0;
+      } else {
+        this.offsetY = -(h - w) / unit;
+        this.offsetX = 0;
+      }
+    }
   }
 
   createVertexBuffer() {
