@@ -7,7 +7,7 @@ class MandelbrotRenderer {
     this.scaling = 1;
     this.offsetX = 0;
     this.offsetY = 0;
-    this.iterations = 25;
+    this.iterations = 20;
 
     // Compile shaders
     this.compileProgram();
@@ -17,6 +17,9 @@ class MandelbrotRenderer {
 
     this.setCanvasSize();
     window.onresize = () => { this.setCanvasSize(); this.render(); };
+
+    // Set event listener for scaling
+    this.cnv.addEventListener('click', this.handleClick.bind(this));
   }
 
   /**
@@ -120,6 +123,57 @@ class MandelbrotRenderer {
   }
 
   /**
+   * Converts a point in screen space [0, width] x [0, height] to the point on the comlex plane
+   *
+   * @param {number} _x The x coordinate
+   * @param {number} _y The y coordinate
+   * @returns {r: number, i: number} The comlex number on the complex plane
+   */
+  toComplexSpace(_x, _y) {
+    const ret = { r: 0, i: 0 };
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = (this.gl.canvas.width) / 1.3;
+    const h = (this.gl.canvas.height) / 1.1;
+    const unit = Math.min(w, h);
+    const x = _x * dpr;
+    const y = _y * dpr;
+
+    ret.r = (((2 * x) / unit) - 2) / this.scaling + this.offsetX;
+    ret.i = (-((2 * y) / unit) - 1.1) / this.scaling - this.offsetY;
+
+    return ret;
+  }
+
+  scaleAround(scalingFactor, _centerX, _centerY) {
+    const newScaling = this.scaling * scalingFactor;
+    const w = (this.gl.canvas.width) / 1.3;
+    const h = (this.gl.canvas.height) / 1.1;
+    const unit = Math.min(w, h);
+    const dpr = window.devicePixelRatio || 1;
+    const centerX = _centerX * dpr;
+    const centerY = _centerY * dpr;
+
+    this.offsetX = ((2 * centerX) / unit - 2)
+    * ((1 / this.scaling) - (1 / newScaling)) + this.offsetX;
+    this.offsetY = -((2 * centerY) / unit - 1.1)
+    * ((1 / this.scaling) - (1 / newScaling)) + this.offsetY;
+    this.scaling = newScaling;
+  }
+
+  /**
+   * Function for handling mouse clicks
+   *
+   * @param {MouseEvent} event The incoming event
+   */
+  handleClick(event) {
+    this.scaleAround(1.1, event.clientX, event.clientY);
+    this.iterations *= Math.sqrt(Math.sqrt(1.1));
+    this.compileProgram();
+    this.render();
+  }
+
+  /**
    * Generates source code for the pixel shader used to render the image
    *
    * @param {number} iterations The number of iterations to have
@@ -141,7 +195,7 @@ class MandelbrotRenderer {
           float imStart = (-(2.0 * gl_FragCoord.y / unit) + 1.1) / scaling - offsets.y;
           float real = 0.0;
           float imaginary = 0.0;
-          ${'iterateMandelbrot(real, imaginary, realStart, imStart);'.repeat(iterations)}
+          for(int i = 0;i < ${Math.round(iterations)};i++) iterateMandelbrot(real, imaginary, realStart, imStart);
       
           float absSq = real * real + imaginary * imaginary;
           ${(() => {
@@ -157,7 +211,7 @@ class MandelbrotRenderer {
                 `;
     }
     return `
-                vec3 color = huetorgb(absSq * 25.0);
+                vec3 color = huetorgb(absSq * 400.0 / ${iterations.toFixed(2)});
                 float mult = 1.0;
                 if(color == vec3(1.0, 1.0, 1.0)) mult = 0.0;
                 gl_FragColor = vec4(mult * color, 1.0);
