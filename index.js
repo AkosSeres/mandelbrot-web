@@ -19,6 +19,9 @@ class MandelbrotRenderer {
     window.onresize = () => { this.setCanvasSize(); this.render(); };
   }
 
+  /**
+   * Renders the image using the already compiled shaders
+   */
   render() {
     this.gl.clearColor(0.8, 0.8, 0.8, 1.0);
     this.gl.clearDepth(1.0);
@@ -42,6 +45,9 @@ class MandelbrotRenderer {
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, offset, vertexCount);
   }
 
+  /**
+   * Loads and compiles the shaders and links them into a program
+   */
   compileProgram() {
     // Load vertex shader (only used because it's mandatory)
     this.vertexShader = this.gl.createShader(this.gl.VERTEX_SHADER);
@@ -71,6 +77,9 @@ class MandelbrotRenderer {
     this.offsetsLocation = this.gl.getUniformLocation(this.shaderProgram, 'offsets');
   }
 
+  /**
+   * Fits the canvas inside the window and centers the set if needed
+   */
   setCanvasSize() {
     // Set canvas size and scale according to the device pixel ratio
     const dpr = window.devicePixelRatio || 1;
@@ -93,6 +102,9 @@ class MandelbrotRenderer {
     }
   }
 
+  /**
+   * Just creates a buffer containing the corner vertices of the screen
+   */
   createVertexBuffer() {
     const buffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
@@ -107,6 +119,11 @@ class MandelbrotRenderer {
     return buffer;
   }
 
+  /**
+   * Generates source code for the pixel shader used to render the image
+   *
+   * @param {number} iterations The number of iterations to have
+   */
   static renderShaderSrc(iterations) {
     return `
       precision highp float;
@@ -122,7 +139,7 @@ class MandelbrotRenderer {
           float imStart = (-(2.0 * gl_FragCoord.y / unit) + 1.1) / scaling - offsets.y;
           float real = 0.0;
           float imaginary = 0.0;
-          for(int i = 0; i <= ${iterations}; i++) { iterateMandelbrot(real, imaginary, realStart, imStart); }
+          ${'iterateMandelbrot(real, imaginary, realStart, imStart);'.repeat(iterations)}
       
           float absSq = real * real + imaginary * imaginary;
           float brightness = absSq / 50.0;
