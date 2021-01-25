@@ -7,7 +7,7 @@ class MandelbrotRenderer {
     this.scaling = 1;
     this.offsetX = 0;
     this.offsetY = 0;
-    this.iterations = 50;
+    this.iterations = 25;
 
     // Compile shaders
     this.compileProgram();
@@ -123,8 +123,9 @@ class MandelbrotRenderer {
    * Generates source code for the pixel shader used to render the image
    *
    * @param {number} iterations The number of iterations to have
+   * @param {number} greyscale If set to true, the resulting image will be a greyscale image
    */
-  static renderShaderSrc(iterations) {
+  static renderShaderSrc(iterations, greyscale = false) {
     return `
       precision highp float;
       uniform vec2 resolution;
@@ -132,6 +133,7 @@ class MandelbrotRenderer {
       uniform vec2 offsets;
       
       void iterateMandelbrot(inout float r, inout float i, float startR, float startI);
+      vec3 huetorgb(in float hue);
       
       void main() {
           float unit = min(resolution.x / 1.3, resolution.y / 1.1);
@@ -142,18 +144,44 @@ class MandelbrotRenderer {
           ${'iterateMandelbrot(real, imaginary, realStart, imStart);'.repeat(iterations)}
       
           float absSq = real * real + imaginary * imaginary;
-          float brightness = absSq / 50.0;
-          if(absSq < 50.0){
-              brightness = 1.0;
-          }
-      
-          gl_FragColor = vec4(brightness, brightness, brightness, 1);
+          ${(() => {
+    if (greyscale) {
+      return `
+                float brightness = absSq;
+                if(absSq < 10.0){
+                    brightness = 1.0;
+                }else{
+                    brightness = fract(absSq);
+                }
+                gl_FragColor = vec4(brightness, brightness, brightness, 1.0);
+                `;
+    }
+    return `
+                vec3 color = huetorgb(absSq * 25.0);
+                float mult = 1.0;
+                if(color == vec3(1.0, 1.0, 1.0)) mult = 0.0;
+                gl_FragColor = vec4(mult * color, 1.0);
+                `;
+  })()
+}
       }
       
       void iterateMandelbrot(inout float r, inout float i, float startR, float startI){
           float oldR = r;
           r = r * r - i * i + startR;
           i = 2.0 * oldR * i + startI;
+      }
+
+      // Function to convert a hue value to rgb with 1.0 saturation and 0.0 brightness
+      // Implemented based on a wikipedia article
+      vec3 huetorgb(in float hue){
+        float k5 = mod(5.0 + hue, 6.0);
+        float k3 = mod(3.0 + hue, 6.0);
+        float k1 = mod(1.0 + hue, 6.0);
+        float f5 = 1.0 - max(0.0, min(min(k5, 4.0 - k5), 1.0));
+        float f3 = 1.0 - max(0.0, min(min(k3, 4.0 - k3), 1.0));
+        float f1 = 1.0 - max(0.0, min(min(k1, 4.0 - k1), 1.0));
+        return vec3(f5, f3, f1);
       }
       `;
   }
