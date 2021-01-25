@@ -72,9 +72,10 @@ class MandelbrotRenderer {
   }
 
   setCanvasSize() {
-    this.gl.canvas.width = window.innerWidth;
-    this.gl.canvas.height = window.innerHeight;
-    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    this.gl.canvas.width = window.innerWidth * dpr;
+    this.gl.canvas.height = window.innerHeight * dpr;
+    this.gl.viewport(0, 0, this.gl.canvas.width * dpr, this.gl.canvas.height * dpr);
   }
 
   createVertexBuffer() {
