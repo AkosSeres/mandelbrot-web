@@ -176,8 +176,44 @@ class MandelbrotRenderer {
    * @param {MouseEvent} event The incoming event
    */
   handleClick(event) {
-    this.scaleAround(1.1, event.clientX, event.clientY);
-    this.iterations *= Math.sqrt(Math.sqrt(1.1));
+    const oldScaling = this.scaling;
+    const oldOffsetX = this.offsetX;
+    const oldOffsetY = this.offsetY;
+    this.scaleAround(2, event.clientX, event.clientY);
+    const newScaling = this.scaling;
+    const newOffsetX = this.offsetX;
+    const newOffsetY = this.offsetY;
+
+    const toScale = newScaling - oldScaling;
+    const toMoveX = newOffsetX - oldOffsetX;
+    const toMoveY = newOffsetY - oldOffsetY;
+
+    const startIter = this.iterations;
+
+    this.scaling = oldScaling;
+    this.offsetX = oldOffsetX;
+    this.offsetY = oldOffsetY;
+    const animationDur = 1000; // in ms
+    const startTime = performance.now();
+
+    const animationCallback = () => {
+      const now = performance.now();
+      let elapsed = now - startTime;
+      if (elapsed > animationDur) {
+        elapsed = animationDur;
+      } else {
+        window.requestAnimationFrame(animationCallback);
+      }
+      this.scaling = oldScaling + (elapsed / animationDur) * toScale;
+      this.offsetX = oldOffsetX + (elapsed / animationDur) * toMoveX;
+      this.offsetY = oldOffsetY + (elapsed / animationDur) * toMoveY;
+
+      this.iterations = startIter * Math.sqrt(Math.sqrt(this.scaling / oldScaling));
+
+      this.compileProgram();
+      this.render();
+    };
+    window.requestAnimationFrame(animationCallback);
     this.compileProgram();
     this.render();
   }
