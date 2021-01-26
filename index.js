@@ -4,7 +4,12 @@ class MandelbrotRenderer {
   constructor(canvasId) {
     this.cnv = document.getElementById(canvasId);
     /** @type {WebGLRenderingContext} */
-    this.gl = this.cnv.getContext('webgl');
+    this.gl = this.cnv.getContext('webgl', {
+      alpha: false,
+      desynchronized: true,
+      antialias: false,
+      preserveDrawingBuffer: false,
+    });
 
     this.scaling = 1;
     this.offsetX = 0;
@@ -535,6 +540,22 @@ function resetView() {
   renderer.resetView();
   renderer.resolutionScaling = 1;
   renderer.setCanvasSize();
-  renderer.setAutoIterations();
   renderer.render();
+}
+
+// eslint-disable-next-line no-unused-vars
+function exportImage() {
+  renderer.resolutionScaling = 1;
+  renderer.setCanvasSize();
+  renderer.render();
+  const img = renderer.cnv.toDataURL('image/png');
+
+  const dlLink = document.createElement('a');
+  dlLink.download = 'export.png';
+  dlLink.href = img;
+  dlLink.dataset.downloadurl = ['image/png', dlLink.download, dlLink.href].join(':');
+
+  document.body.appendChild(dlLink);
+  dlLink.click();
+  document.body.removeChild(dlLink);
 }
