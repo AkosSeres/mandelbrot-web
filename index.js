@@ -1,3 +1,5 @@
+const DROPPED_RES = 0.5;
+
 class MandelbrotRenderer {
   constructor(canvasId) {
     this.cnv = document.getElementById(canvasId);
@@ -20,6 +22,7 @@ class MandelbrotRenderer {
     this.posBuffer = this.createVertexBuffer();
 
     this.setCanvasSize();
+    this.resetView();
     window.onresize = () => { this.setCanvasSize(); this.render(); };
 
     // Set event listeners for scaling
@@ -107,19 +110,19 @@ class MandelbrotRenderer {
     this.gl.canvas.width = window.innerWidth * dpr;
     this.gl.canvas.height = window.innerHeight * dpr;
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+  }
 
+  resetView() {
     // Set offsets that the MB set is in the middle of the screen
-    if (this.scaling === 1) {
-      const w = (this.gl.canvas.width) / 1.3;
-      const h = (this.gl.canvas.height) / 1.1;
-      const unit = Math.min(w, h);
-      if (w >= h) {
-        this.offsetX = -(w - h) / unit;
-        this.offsetY = 0;
-      } else {
-        this.offsetY = -(h - w) / unit;
-        this.offsetX = 0;
-      }
+    const w = (this.gl.canvas.width) / 1.3;
+    const h = (this.gl.canvas.height) / 1.1;
+    const unit = Math.min(w, h);
+    if (w >= h) {
+      this.offsetX = -(w - h) / unit;
+      this.offsetY = 0;
+    } else {
+      this.offsetY = -(h - w) / unit;
+      this.offsetX = 0;
     }
   }
 
@@ -192,6 +195,8 @@ class MandelbrotRenderer {
     event.preventDefault();
 
     this.mouseIsDown = true;
+    this.resolutionScaling = DROPPED_RES;
+    this.setCanvasSize();
   }
 
   /**
@@ -203,6 +208,9 @@ class MandelbrotRenderer {
     event.preventDefault();
 
     this.mouseIsDown = false;
+    this.resolutionScaling = 1;
+    this.setCanvasSize();
+    this.render();
   }
 
   /**
@@ -245,6 +253,10 @@ class MandelbrotRenderer {
         x: event.touches[0].clientX,
         y: event.touches[0].clientY,
       }];
+
+      this.mouseIsDown = true;
+      this.resolutionScaling = DROPPED_RES;
+      this.setCanvasSize();
     }
     return false;
   }
@@ -292,10 +304,21 @@ class MandelbrotRenderer {
     if (event.touches.length === 0) {
       this.touchIDs = [];
       this.touchCoords = [];
+
+      this.mouseIsDown = false;
+      this.resolutionScaling = 1;
+      this.setCanvasSize();
+      this.setAutoIterations();
+      this.render();
     }
     this.mouseIsDown = false;
 
     return false;
+  }
+
+  setAutoIterations() {
+    this.iterations = (this.scaling ** 0.25) * 20;
+    this.compileProgram();
   }
 
   /**
@@ -414,6 +437,24 @@ class MandelbrotRenderer {
 
     const scalingFactor = 1.001 ** (-event.deltaY);
     this.scaleAround(scalingFactor, event.clientX, event.clientY);
+
+    if (this.resolutionScaling !== DROPPED_RES) {
+      this.resolutionScaling = DROPPED_RES;
+      this.setCanvasSize();
+    }
+
+    if (this.zoomTimeoutID !== false) {
+      clearTimeout(this.zoomTimeoutID);
+      this.zoomTimeoutID = 0;
+    }
+    this.zoomTimeoutID = setTimeout(() => {
+      this.resolutionScaling = 1;
+      this.setCanvasSize();
+      this.setAutoIterations();
+      this.zoomTimeoutID = false;
+      this.render();
+    }, 200);
+
     this.render();
   }
 
