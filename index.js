@@ -9,6 +9,10 @@ class MandelbrotRenderer {
     this.offsetY = 0;
     this.iterations = 20;
 
+    /** Can drop the resolution with this to gain performance
+        (setCanvasSize has to be called to take effect). Default is 1. */
+    this.resolutionScaling = 1;
+
     // Compile shaders
     this.compileProgram();
 
@@ -85,7 +89,8 @@ class MandelbrotRenderer {
    */
   setCanvasSize() {
     // Set canvas size and scale according to the device pixel ratio
-    const dpr = window.devicePixelRatio || 1;
+    let dpr = window.devicePixelRatio || 1;
+    dpr *= this.resolutionScaling;
     this.gl.canvas.width = window.innerWidth * dpr;
     this.gl.canvas.height = window.innerHeight * dpr;
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
@@ -132,7 +137,8 @@ class MandelbrotRenderer {
   toComplexSpace(_x, _y) {
     const ret = { r: 0, i: 0 };
 
-    const dpr = window.devicePixelRatio || 1;
+    let dpr = window.devicePixelRatio || 1;
+    dpr *= this.resolutionScaling;
     const w = (this.gl.canvas.width) / 1.3;
     const h = (this.gl.canvas.height) / 1.1;
     const unit = Math.min(w, h);
@@ -147,7 +153,8 @@ class MandelbrotRenderer {
 
   scaleAround(scalingFactor, _centerX, _centerY) {
     const newScaling = this.scaling * scalingFactor;
-    const dpr = window.devicePixelRatio || 1;
+    let dpr = window.devicePixelRatio || 1;
+    dpr *= this.resolutionScaling;
     const w = (this.gl.canvas.width) / 1.3;
     const h = (this.gl.canvas.height) / 1.1;
     const unit = Math.min(h, w);
