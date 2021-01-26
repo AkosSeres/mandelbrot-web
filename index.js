@@ -22,8 +22,21 @@ class MandelbrotRenderer {
     this.setCanvasSize();
     window.onresize = () => { this.setCanvasSize(); this.render(); };
 
-    // Set event listener for scaling
-    this.cnv.addEventListener('click', this.handleClick.bind(this));
+    // Set event listeners for scaling
+    this.cnv.addEventListener('wheel', this.handleScroll.bind(this));
+
+    // Set event listeners for moving the viewport
+    this.cnv.addEventListener('mousedown', this.handleMouseDown.bind(this));
+    this.cnv.addEventListener('mouseup', this.handleMouseUp.bind(this));
+    this.cnv.addEventListener('mousemove', this.handleMouseMove.bind(this));
+    this.cnv.addEventListener('touchstart', this.handleTouchStart.bind(this));
+    this.cnv.addEventListener('touchend', this.handleTouchEnd.bind(this));
+    this.cnv.addEventListener('touchmove', this.handleTouchMove.bind(this));
+    this.mouseIsDown = false;
+    /** @type {number[]} */
+    this.touchIDs = [];
+    /** @type {{x:number,y:number}[]} */
+    this.touchCoords = [];
   }
 
   /**
@@ -171,53 +184,237 @@ class MandelbrotRenderer {
   }
 
   /**
-   * Function for handling mouse clicks
+   * Handles mouse down events on the canvas
    *
-   * @param {MouseEvent} event The incoming event
+   * @param {MouseEvent} event The event sent
    */
-  handleClick(event) {
-    const oldScaling = this.scaling;
-    const oldOffsetX = this.offsetX;
-    const oldOffsetY = this.offsetY;
-    this.scaleAround(2, event.clientX, event.clientY);
-    const newScaling = this.scaling;
-    const newOffsetX = this.offsetX;
-    const newOffsetY = this.offsetY;
+  handleMouseDown(event) {
+    event.preventDefault();
 
-    const toScale = newScaling - oldScaling;
-    const toMoveX = newOffsetX - oldOffsetX;
-    const toMoveY = newOffsetY - oldOffsetY;
+    this.mouseIsDown = true;
+  }
 
-    this.scaling = oldScaling;
-    this.offsetX = oldOffsetX;
-    this.offsetY = oldOffsetY;
-    const animationDur = 1000; // in ms
-    const startTime = performance.now();
+  /**
+   * Handles mouse up events on the canvas
+   *
+   * @param {MouseEvent} event The event sent
+   */
+  handleMouseUp(event) {
+    event.preventDefault();
 
-    this.resolutionScaling = 0.5;
-    this.setCanvasSize();
+    this.mouseIsDown = false;
+  }
 
-    const animationCallback = () => {
-      const now = performance.now();
-      let elapsed = now - startTime;
-      if (elapsed > animationDur) {
-        elapsed = animationDur;
+  /**
+   * Handles touch start events on the canvas
+   *
+   * @param {TouchEvent} event The event sent
+   */
+  handleTouchStart(event) {
+    this.mouseIsDown = true;
 
-        this.resolutionScaling = 1;
-        this.setCanvasSize();
-
-        this.iterations = (this.scaling ** 0.25) * 20;
-        this.compileProgram();
-      } else {
-        window.requestAnimationFrame(animationCallback);
+    event.preventDefault();
+    if (event.touches.length > 1) {
+      if (event.touches.length === 2) {
+        // Save touches
+        this.touchIDs = [];
+        this.touchCoords = [];
+        this.touchIDs.push(event.touches[0].identifier);
+        this.touchIDs.push(event.touches[1].identifier);
+        this.touchCoords.push(
+          {
+            x: event.touches[0].clientX,
+            y: event.touches[0].clientY,
+          },
+        );
+        this.touchCoords.push(
+          {
+            x: event.touches[1].clientX,
+            y: event.touches[1].clientY,
+          },
+        );
       }
-      this.scaling = oldScaling + (elapsed / animationDur) * toScale;
-      this.offsetX = oldOffsetX + (elapsed / animationDur) * toMoveX;
-      this.offsetY = oldOffsetY + (elapsed / animationDur) * toMoveY;
+      if (event.touches.length > 2) {
+        this.touchIDs = [];
+        this.touchCoords = [];
+      }
+      return false;
+    } if (event.touches.length === 1) {
+      this.touchIDs = [event.touches[0].identifier];
+      this.touchCoords = [{
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY,
+      }];
+    }
+    return false;
+  }
 
-      this.render();
+  /**
+   * Handles touch end events on the canvas
+   *
+   * @param {TouchEvent} event The event sent
+   */
+  handleTouchEnd(event) {
+    event.preventDefault();
+
+    if (event.touches.length > 1) {
+      if (event.touches.length === 2) {
+        // Save touches
+        this.touchIDs = [];
+        this.touchCoords = [];
+        this.touchIDs.push(event.touches[0].identifier);
+        this.touchIDs.push(event.touches[1].identifier);
+        this.touchCoords.push(
+          {
+            x: event.touches[0].clientX,
+            y: event.touches[0].clientY,
+          },
+        );
+        this.touchCoords.push(
+          {
+            x: event.touches[1].clientX,
+            y: event.touches[1].clientY,
+          },
+        );
+      }
+      if (event.touches.length > 2) {
+        this.touchIDs = [];
+        this.touchCoords = [];
+      }
+      return false;
+    } if (event.touches.length === 1) {
+      this.touchIDs = [event.touches[0].identifier];
+      this.touchCoords = [{
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY,
+      }];
+    }
+    if (event.touches.length === 0) {
+      this.touchIDs = [];
+      this.touchCoords = [];
+    }
+    this.mouseIsDown = false;
+
+    return false;
+  }
+
+  /**
+   * Handles touch move events
+   *
+   * @param {TouchEvent} event The event sent
+   */
+  handleTouchMove(event) {
+    event.preventDefault();
+
+    if (event.touches.length === 2) {
+      let touches = [];
+      if ((event.touches.item(0)).identifier === this.touchIDs[0]) {
+        touches.push(event.touches.item(0));
+        touches.push(event.touches.item(1));
+      } else {
+        touches.push(event.touches.item(1));
+        touches.push(event.touches.item(0));
+      }
+      touches = touches.map((t) => (
+        { x: t.clientX, y: t.clientY }));
+      this.processMultiTouchGesture(this.touchCoords, touches);
+      this.touchCoords = touches;
+      return false;
+    }
+    if (event.touches.length > 2) return false;
+
+    // Now we only have 1 touches so do movement
+    const movementX = event.touches[0].clientX - this.touchCoords[0].x;
+    const movementY = event.touches[0].clientY - this.touchCoords[0].y;
+
+    const origo = this.toComplexSpace(0, 0);
+    const movementC = this.toComplexSpace(movementX, movementY);
+
+    this.offsetX += (origo.r - movementC.r);
+    this.offsetY += (origo.i - movementC.i);
+    this.render();
+
+    this.touchIDs = [event.touches[0].identifier];
+    this.touchCoords = [{
+      x: event.touches[0].clientX,
+      y: event.touches[0].clientY,
+    }];
+    return false;
+  }
+
+  /**
+   * Processes gestures with 2 touches present
+   * @param {{x:number,y:number}[]} oldCoords The old coordinates of the touches
+   * @param {{x:number,y:number}[]} newCoords The new coordinates of the touches
+   */
+  processMultiTouchGesture(oldCoords, newCoords) {
+    const oldCenter = {
+      x: oldCoords[1].x + oldCoords[0].x,
+      y: oldCoords[1].y + oldCoords[0].y,
     };
-    window.requestAnimationFrame(animationCallback);
+    oldCenter.x *= (0.5);
+    oldCenter.y *= (0.5);
+    const newCenter = {
+      x: newCoords[1].x + newCoords[0].x,
+      y: newCoords[1].y + newCoords[0].y,
+    };
+    newCenter.x *= (0.5);
+    newCenter.y *= (0.5);
+    const oldLen = (((oldCoords[0].x - oldCoords[1].x) ** 2)
+    + ((oldCoords[0].y - oldCoords[1].y) ** 2)) ** 0.5;
+    const newLen = (((newCoords[0].x - newCoords[1].x) ** 2)
+    + ((newCoords[0].y - newCoords[1].y) ** 2)) ** 0.5;
+    const scalingFactor = Math.sqrt(newLen / oldLen);
+    const middleCenter = {
+      x: oldCenter.x + newCenter.x,
+      y: oldCenter.y + newCenter.y,
+    };
+    middleCenter.x *= (0.5);
+    middleCenter.y *= (0.5);
+    const toMove = {
+      x: newCenter.x - oldCenter.x,
+      y: newCenter.y - oldCenter.y,
+    };
+    toMove.x *= (scalingFactor);
+    toMove.y *= (scalingFactor);
+    this.scaleAround(scalingFactor, middleCenter.x, middleCenter.y);
+
+    const origo = this.toComplexSpace(0, 0);
+    const movementC = this.toComplexSpace(toMove.x, toMove.y);
+
+    this.offsetX += (origo.r - movementC.r);
+    this.offsetY += (origo.i - movementC.i);
+    this.render();
+  }
+
+  /**
+   * Handles mouse move events on the canvas
+   *
+   * @param {MouseEvent} event The event sent
+   */
+  handleMouseMove(event) {
+    event.preventDefault();
+    if (!this.mouseIsDown) return;
+
+    const origo = this.toComplexSpace(0, 0);
+    const movementC = this.toComplexSpace(event.movementX, event.movementY);
+
+    this.offsetX += (origo.r - movementC.r);
+    this.offsetY += (origo.i - movementC.i);
+    this.render();
+  }
+
+  /**
+   * Function for handling scroll events
+   *
+   * @param {WheelEvent} event The incoming event
+   */
+  handleScroll(event) {
+    event.preventDefault();
+
+    const scalingFactor = 1.001 ** (-event.deltaY);
+    this.scaleAround(scalingFactor, event.clientX, event.clientY);
+    this.render();
   }
 
   /**
