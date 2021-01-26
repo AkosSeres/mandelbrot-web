@@ -528,3 +528,13 @@ class MandelbrotRenderer {
 
 const renderer = new MandelbrotRenderer('mainCanvas');
 renderer.render();
+
+// eslint-disable-next-line no-unused-vars
+function resetView() {
+  renderer.scaling = 1;
+  renderer.resetView();
+  renderer.resolutionScaling = 1;
+  renderer.setCanvasSize();
+  renderer.setAutoIterations();
+  renderer.render();
+}

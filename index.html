@@ -47,6 +47,10 @@
             margin-left: 1rem;
         }
 
+        #contentCheckboxLabel{
+            cursor: pointer;
+        }
+
         svg {
             transition: all 0.5s cubic-bezier(0.075, 0.82, 0.165, 1);
             display: block;
@@ -106,6 +110,7 @@
             font-size: small;
             border-right: 0.5px solid black;
             transition: background-color 0.2s;
+            cursor: pointer;
         }
 
         #exportButton {
@@ -122,6 +127,7 @@
             font-size: small;
             border-left: 0.5px solid black;
             transition: background-color 0.2s;
+            cursor: pointer;
         }
 
         #exportButton:hover,
@@ -160,7 +166,7 @@
             <label for="autoCheckbox">Auto iterations</label><br>
             <label id="iterLabel" for="iterInput" nowrap>Iterations: <input id="iterInput" type="number" /></nobr>
             </label><br>
-            <div id="resetButton">Reset view</div>
+            <div id="resetButton" onclick="resetView();">Reset view</div>
             <div id="exportButton">Export to PNG</div>
         </div>
     </div>
