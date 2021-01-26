@@ -88,7 +88,7 @@ class MandelbrotRenderer {
     const dpr = window.devicePixelRatio || 1;
     this.gl.canvas.width = window.innerWidth * dpr;
     this.gl.canvas.height = window.innerHeight * dpr;
-    this.gl.viewport(0, 0, this.gl.canvas.width * dpr, this.gl.canvas.height * dpr);
+    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
 
     // Set offsets that the MB set is in the middle of the screen
     if (this.scaling === 1) {
@@ -140,24 +140,26 @@ class MandelbrotRenderer {
     const y = _y * dpr;
 
     ret.r = (((2 * x) / unit) - 2) / this.scaling + this.offsetX;
-    ret.i = (-((2 * y) / unit) - 1.1) / this.scaling - this.offsetY;
+    ret.i = (-((2 * y) / unit) + 1.1) / this.scaling - this.offsetY;
 
     return ret;
   }
 
   scaleAround(scalingFactor, _centerX, _centerY) {
     const newScaling = this.scaling * scalingFactor;
+    const dpr = window.devicePixelRatio || 1;
     const w = (this.gl.canvas.width) / 1.3;
     const h = (this.gl.canvas.height) / 1.1;
-    const unit = Math.min(w, h);
-    const dpr = window.devicePixelRatio || 1;
+    const unit = Math.min(h, w);
     const centerX = _centerX * dpr;
-    const centerY = _centerY * dpr;
+    const centerY = (_centerY) * dpr;
 
     this.offsetX = ((2 * centerX) / unit - 2)
     * ((1 / this.scaling) - (1 / newScaling)) + this.offsetX;
-    this.offsetY = -((2 * centerY) / unit - 1.1)
-    * ((1 / this.scaling) - (1 / newScaling)) + this.offsetY;
+
+    this.offsetY = -(-(2 * centerY) / (unit) + 1.1)
+    * ((1 / newScaling) - (1 / this.scaling)) + this.offsetY;
+
     this.scaling = newScaling;
   }
 
