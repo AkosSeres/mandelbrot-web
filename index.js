@@ -1,3 +1,4 @@
+/* eslint-disable radix */
 const DROPPED_RES = 0.5;
 
 class MandelbrotRenderer {
@@ -15,6 +16,8 @@ class MandelbrotRenderer {
     this.offsetX = 0;
     this.offsetY = 0;
     this.iterations = 20;
+    this.autoSetIter = true;
+    document.getElementById('autoCheckbox').checked = true;
 
     /** Can drop the resolution with this to gain performance
         (setCanvasSize has to be called to take effect). Default is 1. */
@@ -103,6 +106,18 @@ class MandelbrotRenderer {
     this.resolutionLocation = this.gl.getUniformLocation(this.shaderProgram, 'resolution');
     this.scalingLocation = this.gl.getUniformLocation(this.shaderProgram, 'scaling');
     this.offsetsLocation = this.gl.getUniformLocation(this.shaderProgram, 'offsets');
+
+    // Set value of iterations input
+    document.getElementById('iterInput').value = this.iterations.toFixed();
+  }
+
+  iterationsChanged(input) {
+    let newVal = Math.floor(input.valueAsNumber);
+    if (newVal < Number.parseInt(input.min))newVal = Number.parseInt(input.min);
+    if (newVal > Number.parseInt(input.max))newVal = Number.parseInt(input.max);
+    this.iterations = newVal;
+    this.compileProgram();
+    this.render();
   }
 
   /**
@@ -322,6 +337,7 @@ class MandelbrotRenderer {
   }
 
   setAutoIterations() {
+    if (!this.autoSetIter) return;
     this.iterations = (this.scaling ** 0.25) * 20;
     this.compileProgram();
   }
@@ -461,6 +477,14 @@ class MandelbrotRenderer {
     }, 200);
 
     this.render();
+  }
+
+  autoClicked(checkBox) {
+    this.autoSetIter = checkBox.checked;
+    if (this.autoSetIter) {
+      this.setAutoIterations();
+      this.render();
+    }
   }
 
   /**
