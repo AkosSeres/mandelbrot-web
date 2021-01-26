@@ -188,19 +188,26 @@ class MandelbrotRenderer {
     const toMoveX = newOffsetX - oldOffsetX;
     const toMoveY = newOffsetY - oldOffsetY;
 
-    const startIter = this.iterations;
-
     this.scaling = oldScaling;
     this.offsetX = oldOffsetX;
     this.offsetY = oldOffsetY;
     const animationDur = 1000; // in ms
     const startTime = performance.now();
 
+    this.resolutionScaling = 0.5;
+    this.setCanvasSize();
+
     const animationCallback = () => {
       const now = performance.now();
       let elapsed = now - startTime;
       if (elapsed > animationDur) {
         elapsed = animationDur;
+
+        this.resolutionScaling = 1;
+        this.setCanvasSize();
+
+        this.iterations = (this.scaling ** 0.25) * 20;
+        this.compileProgram();
       } else {
         window.requestAnimationFrame(animationCallback);
       }
@@ -208,14 +215,9 @@ class MandelbrotRenderer {
       this.offsetX = oldOffsetX + (elapsed / animationDur) * toMoveX;
       this.offsetY = oldOffsetY + (elapsed / animationDur) * toMoveY;
 
-      this.iterations = startIter * Math.sqrt(Math.sqrt(this.scaling / oldScaling));
-
-      this.compileProgram();
       this.render();
     };
     window.requestAnimationFrame(animationCallback);
-    this.compileProgram();
-    this.render();
   }
 
   /**
