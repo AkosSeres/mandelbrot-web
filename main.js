@@ -555,6 +555,7 @@ class MandelbrotRenderer {
    */
   autoClicked(checkBox) {
     this.autoSetIter = checkBox.checked;
+    console.log(this.autoSetIter);
     if (this.autoSetIter) {
       // If turned on, rerender with new auto value
       this.setAutoIterations();
@@ -641,6 +642,7 @@ function resetView() {
   // Reset scaling a center the MB set
   renderer.scaling = 1;
   renderer.resetView();
+  renderer.setAutoIterations();
   // Reset resolution and rerender
   renderer.resolutionScaling = 1;
   renderer.setCanvasSize();
@@ -671,3 +673,17 @@ function exportImage() {
   downloadLink.click();
   document.body.removeChild(downloadLink);
 }
+
+// Set event listeners for the input elements
+document.getElementById('autoCheckbox').onclick = function () {
+  renderer.autoClicked(this);
+};
+document.getElementById('iterInput').onchange = function () {
+  renderer.iterationsChanged(this);
+};
+document.getElementById('resetButton').onclick = () => {
+  resetView();
+};
+document.getElementById('exportButton').onclick = () => {
+  exportImage();
+};

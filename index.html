@@ -47,7 +47,7 @@
             margin-left: 1rem;
         }
 
-        #contentCheckboxLabel{
+        #contentCheckboxLabel {
             cursor: pointer;
         }
 
@@ -163,17 +163,19 @@
         </label>
         <div class="settings-content" nowrap>
             <hr>
-            <input type="checkbox" name="autoCheckbox" id="autoCheckbox" onclick="renderer.autoClicked(this);" checked>
+            <input type="checkbox" name="autoCheckbox" id="autoCheckbox" checked>
             <label for="autoCheckbox">Auto iterations</label><br>
-            <label id="iterLabel" for="iterInput" nowrap>Iterations: <input id="iterInput" type="number" min="1" max="2500" step="1" onchange="renderer.iterationsChanged(this);" /></nobr>
+            <label id="iterLabel" for="iterInput" nowrap>Iterations: <input id="iterInput" type="number" min="1"
+                    max="2500" step="1" /></nobr>
             </label><br>
-            <div id="resetButton" onclick="resetView();">Reset view</div>
-            <div id="exportButton" onclick="exportImage();">Export to PNG</div>
+            <div id="resetButton">Reset view</div>
+            <div id="exportButton">Export to PNG</div>
         </div>
     </div>
     <script id="vShader" type="x-shader/x-vertex">
         attribute vec4 aVertexPosition;
         void main() {
+            // Does really nothing
             gl_Position = aVertexPosition;
         }
     </script>
