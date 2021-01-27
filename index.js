@@ -1,7 +1,15 @@
 /* eslint-disable radix */
 const DROPPED_RES = 0.5;
 
+/**
+ * A class with all the functions for handling the renderign and moving the fractal.
+ */
 class MandelbrotRenderer {
+  /**
+   * Creates the renderer instance.
+   *
+   * @param {string} canvasId The id of the canvas to render into
+   */
   constructor(canvasId) {
     this.cnv = document.getElementById(canvasId);
     /** @type {WebGLRenderingContext} */
@@ -12,28 +20,38 @@ class MandelbrotRenderer {
       preserveDrawingBuffer: false,
     });
 
+    // These variables describe the zoom level and placement of the viewport.
     this.scaling = 1;
     this.offsetX = 0;
     this.offsetY = 0;
+
+    // How many iterations should be used in the pixel shader
+    // compileProgram has to be called to take effect
     this.iterations = 20;
+    // If set to true, the renderer figures out the number of
+    // iterations needed based on the zoom level
     this.autoSetIter = true;
-    document.getElementById('autoCheckbox').checked = true;
+    // Set checkbox to the same value
+    document.getElementById('autoCheckbox').checked = this.autoSetIter;
 
     /** Can drop the resolution with this to gain performance
         (setCanvasSize has to be called to take effect). Default is 1. */
     this.resolutionScaling = 1;
 
-    // Compile shaders
+    // Compile shaders into program
     this.compileProgram();
 
     // Create buffer of the corner points of the screen
     this.posBuffer = this.createVertexBuffer();
 
+    // Set initial canvas size and set the view to fit the fractal inside
     this.setCanvasSize();
     this.resetView();
+    // If the viewport size chages (browser window resized or orientation change on phones)
+    // Change the size of the canvas accordingly and rerender the image
     window.onresize = () => { this.setCanvasSize(); this.render(); };
 
-    // Set event listeners for scaling
+    // Set event listeners for zooming
     this.cnv.addEventListener('wheel', this.handleScroll.bind(this));
 
     // Set event listeners for moving the viewport
@@ -44,6 +62,9 @@ class MandelbrotRenderer {
     this.cnv.addEventListener('touchend', this.handleTouchEnd.bind(this));
     this.cnv.addEventListener('touchmove', this.handleTouchMove.bind(this));
     this.mouseIsDown = false;
+
+    // Store the IDs and coodinates of the current ongoing touches
+    // on the screen for processing pinch zoom gestures
     /** @type {number[]} */
     this.touchIDs = [];
     /** @type {{x:number,y:number}[]} */
@@ -82,12 +103,15 @@ class MandelbrotRenderer {
   compileProgram() {
     // Load vertex shader (only used because it's mandatory)
     this.vertexShader = this.gl.createShader(this.gl.VERTEX_SHADER);
+    // Load source from the html page
     this.gl.shaderSource(this.vertexShader, document.getElementById('vShader').firstChild.textContent);
     this.gl.compileShader(this.vertexShader);
     // Load the fragment shader used to render the image
     this.renderShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
+    // Load source from the static function with the right number of iterations
     this.gl.shaderSource(this.renderShader, MandelbrotRenderer.renderShaderSrc(this.iterations));
     this.gl.compileShader(this.renderShader);
+    // Check for errors
     if (!this.gl.getShaderParameter(this.renderShader, this.gl.COMPILE_STATUS)) {
       throw new Error(`An error occurred compiling the render shader: ${this.gl.getShaderInfoLog(this.renderShader)}`);
     }
@@ -102,7 +126,7 @@ class MandelbrotRenderer {
       throw new Error('Error loading the shaders');
     }
 
-    // Get and store locations
+    // Get and store locations of uniforms in the shaders
     this.resolutionLocation = this.gl.getUniformLocation(this.shaderProgram, 'resolution');
     this.scalingLocation = this.gl.getUniformLocation(this.shaderProgram, 'scaling');
     this.offsetsLocation = this.gl.getUniformLocation(this.shaderProgram, 'offsets');
@@ -111,17 +135,25 @@ class MandelbrotRenderer {
     document.getElementById('iterInput').value = this.iterations.toFixed();
   }
 
+  /**
+   * Gets called when the iteration number input gets a new value from the user.
+   *
+   * @param {HTMLInputElement} input The input element for the iterations
+   */
   iterationsChanged(input) {
+    // Store value and check if it is inside the boundaries
     let newVal = Math.floor(input.valueAsNumber);
     if (newVal < Number.parseInt(input.min))newVal = Number.parseInt(input.min);
     if (newVal > Number.parseInt(input.max))newVal = Number.parseInt(input.max);
     this.iterations = newVal;
+    // Recompile shaders with the new iteration number
     this.compileProgram();
+    // Rerender
     this.render();
   }
 
   /**
-   * Fits the canvas inside the window and centers the set if needed
+   * Fits the canvas inside the window and centers the set if needed.
    */
   setCanvasSize() {
     // Set canvas size and scale according to the device pixel ratio
@@ -132,6 +164,9 @@ class MandelbrotRenderer {
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
   }
 
+  /**
+   * Centers the MB set on the screen.
+   */
   resetView() {
     // Set offsets that the MB set is in the middle of the screen
     const w = (this.gl.canvas.width) / 1.3;
@@ -147,7 +182,7 @@ class MandelbrotRenderer {
   }
 
   /**
-   * Just creates a buffer containing the corner vertices of the screen
+   * Just creates a buffer containing the corner vertices of the screen.
    */
   createVertexBuffer() {
     const buffer = this.gl.createBuffer();
@@ -187,6 +222,18 @@ class MandelbrotRenderer {
     return ret;
   }
 
+  /**
+   * This function zooms in in a way that the center stays in the same point on the screen.
+   * I do not know why but it does not work properly when the height is
+   * bigger than the width of the screen, and a haven't managed to figure out why.
+   * I have redone the transformation equations a couple of times but did not fix it.
+   * Might be because WebGL's coordinate system start in the bottom left corner while the
+   * browser's coordinate system's origo is in the upper left.
+   *
+   * @param {number} scalingFactor The factor to scale with
+   * @param {number} _centerX The x coordinate of the center of the scaling in screen space
+   * @param {number} _centerY The y coordinate of the center of the scaling in screen space
+   */
   scaleAround(scalingFactor, _centerX, _centerY) {
     const newScaling = this.scaling * scalingFactor;
     let dpr = window.devicePixelRatio || 1;
@@ -207,7 +254,7 @@ class MandelbrotRenderer {
   }
 
   /**
-   * Handles mouse down events on the canvas
+   * Handles mouse down events on the canvas.
    *
    * @param {MouseEvent} event The event sent
    */
@@ -215,12 +262,13 @@ class MandelbrotRenderer {
     event.preventDefault();
 
     this.mouseIsDown = true;
+    // Drop the resolution while moving the view so that it does not lag
     this.resolutionScaling = DROPPED_RES;
     this.setCanvasSize();
   }
 
   /**
-   * Handles mouse up events on the canvas
+   * Handles mouse up events on the canvas.
    *
    * @param {MouseEvent} event The event sent
    */
@@ -228,13 +276,14 @@ class MandelbrotRenderer {
     event.preventDefault();
 
     this.mouseIsDown = false;
+    // Set the resolution back to default
     this.resolutionScaling = 1;
     this.setCanvasSize();
     this.render();
   }
 
   /**
-   * Handles touch start events on the canvas
+   * Handles touch start events on the canvas.
    *
    * @param {TouchEvent} event The event sent
    */
@@ -242,6 +291,8 @@ class MandelbrotRenderer {
     this.mouseIsDown = true;
 
     event.preventDefault();
+
+    // Store touches in the arrays for use in later touch events
     if (event.touches.length > 1) {
       if (event.touches.length === 2) {
         // Save touches
@@ -289,6 +340,7 @@ class MandelbrotRenderer {
   handleTouchEnd(event) {
     event.preventDefault();
 
+    // Remove or add touches to the arrays
     if (event.touches.length > 1) {
       if (event.touches.length === 2) {
         // Save touches
@@ -325,6 +377,7 @@ class MandelbrotRenderer {
       this.touchIDs = [];
       this.touchCoords = [];
 
+      // If no more touches are present, set resolution back to normal
       this.mouseIsDown = false;
       this.resolutionScaling = 1;
       this.setCanvasSize();
@@ -336,6 +389,9 @@ class MandelbrotRenderer {
     return false;
   }
 
+  /**
+   * Sets the number of iterations to the desired value if needed.
+   */
   setAutoIterations() {
     if (!this.autoSetIter) return;
     this.iterations = (this.scaling ** 0.25) * 20;
@@ -343,13 +399,14 @@ class MandelbrotRenderer {
   }
 
   /**
-   * Handles touch move events
+   * Handles touch move events.
    *
    * @param {TouchEvent} event The event sent
    */
   handleTouchMove(event) {
     event.preventDefault();
 
+    // Find the corresponding touches that are in the arrays
     if (event.touches.length === 2) {
       let touches = [];
       if ((event.touches.item(0)).identifier === this.touchIDs[0]) {
@@ -361,6 +418,7 @@ class MandelbrotRenderer {
       }
       touches = touches.map((t) => (
         { x: t.clientX, y: t.clientY }));
+      // If 2 touches are present, process the pinch zoom gesture
       this.processMultiTouchGesture(this.touchCoords, touches);
       this.touchCoords = touches;
       return false;
@@ -387,7 +445,11 @@ class MandelbrotRenderer {
   }
 
   /**
-   * Processes gestures with 2 touches present
+   * Processes gestures with 2 touches present.
+   * It looks at the distance between touches and by how much that
+   * distance changed since the last update. Based on that, it zooms in or out,
+   * and moves the camera if movement is present too.
+   *
    * @param {{x:number,y:number}[]} oldCoords The old coordinates of the touches
    * @param {{x:number,y:number}[]} newCoords The new coordinates of the touches
    */
@@ -428,11 +490,12 @@ class MandelbrotRenderer {
 
     this.offsetX += (origo.r - movementC.r);
     this.offsetY += (origo.i - movementC.i);
+    // Rerender the iamge to take effect
     this.render();
   }
 
   /**
-   * Handles mouse move events on the canvas
+   * Handles mouse move events on the canvas.
    *
    * @param {MouseEvent} event The event sent
    */
@@ -440,30 +503,35 @@ class MandelbrotRenderer {
     event.preventDefault();
     if (!this.mouseIsDown) return;
 
+    // If the mouse is down (getting dragged), move the camera
     const origo = this.toComplexSpace(0, 0);
     const movementC = this.toComplexSpace(event.movementX, event.movementY);
 
     this.offsetX += (origo.r - movementC.r);
     this.offsetY += (origo.i - movementC.i);
+    // Rerender to show the difference
     this.render();
   }
 
   /**
-   * Function for handling scroll events
+   * Function for handling scroll events.
    *
    * @param {WheelEvent} event The incoming event
    */
   handleScroll(event) {
     event.preventDefault();
 
+    // Find the amount to zoom with
     const scalingFactor = 1.001 ** (-event.deltaY);
     this.scaleAround(scalingFactor, event.clientX, event.clientY);
 
+    // Drop resolution if needed
     if (this.resolutionScaling !== DROPPED_RES) {
       this.resolutionScaling = DROPPED_RES;
       this.setCanvasSize();
     }
 
+    // Add a debounce effect to the resolution resetting with setTimeout
     if (this.zoomTimeoutID !== false) {
       clearTimeout(this.zoomTimeoutID);
       this.zoomTimeoutID = 0;
@@ -473,15 +541,22 @@ class MandelbrotRenderer {
       this.setCanvasSize();
       this.setAutoIterations();
       this.zoomTimeoutID = false;
+      // Rerender with normal resolution
       this.render();
     }, 200);
 
     this.render();
   }
 
+  /**
+   * Gets called when the user diables or enables the auto iterations setting.
+   *
+   * @param {HTMLInputElement} checkBox The checkbox input element
+   */
   autoClicked(checkBox) {
     this.autoSetIter = checkBox.checked;
     if (this.autoSetIter) {
+      // If turned on, rerender with new auto value
       this.setAutoIterations();
       this.render();
     }
@@ -558,28 +633,41 @@ class MandelbrotRenderer {
 const renderer = new MandelbrotRenderer('mainCanvas');
 renderer.render();
 
+/**
+ * Gets called when the user presses the button to reset the view.
+ */
 // eslint-disable-next-line no-unused-vars
 function resetView() {
+  // Reset scaling a center the MB set
   renderer.scaling = 1;
   renderer.resetView();
+  // Reset resolution and rerender
   renderer.resolutionScaling = 1;
   renderer.setCanvasSize();
   renderer.render();
 }
 
+/**
+ * Exports and prompts the user to save a png image of the current content of the canvas.
+ */
 // eslint-disable-next-line no-unused-vars
 function exportImage() {
+  // Reset resolution to have a sharp image
   renderer.resolutionScaling = 1;
   renderer.setCanvasSize();
+  // Rerender so that not an empty image will be exported
   renderer.render();
+  // Create image data url from the canvas
   const img = renderer.cnv.toDataURL('image/png');
 
-  const dlLink = document.createElement('a');
-  dlLink.download = 'export.png';
-  dlLink.href = img;
-  dlLink.dataset.downloadurl = ['image/png', dlLink.download, dlLink.href].join(':');
+  // Create a download link in the html document for downloading the image
+  const downloadLink = document.createElement('a');
+  downloadLink.download = 'export.png';
+  downloadLink.href = img;
+  downloadLink.dataset.downloadurl = ['image/png', downloadLink.download, downloadLink.href].join(':');
 
-  document.body.appendChild(dlLink);
-  dlLink.click();
-  document.body.removeChild(dlLink);
+  // Add the link to the document, click it virtually then remove it
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
 }
