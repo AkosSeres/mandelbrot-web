@@ -167,6 +167,7 @@ class MandelbrotRenderer {
   setCanvasSize() {
     // Set canvas size and scale according to the device pixel ratio
     let dpr = window.devicePixelRatio || 1;
+    if(this.resolutionScaling == DROPPED_RES && this.normalisedRendering) dpr *= 0.5;
     dpr *= this.resolutionScaling;
     this.gl.canvas.width = window.innerWidth * dpr;
     this.gl.canvas.height = window.innerHeight * dpr;
