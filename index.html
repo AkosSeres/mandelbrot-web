@@ -3,6 +3,9 @@
 
 <head>
     <title>Mandelbrot viewer</title>
+    <link
+        href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJllLv+ZZS7/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJllLv8AAAAAAAAAAJllLv8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJllLv8AAAAAmS5e/ZkuXv0AAAAAmWUu/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJllLv8AAAAAmS5e/QAAAAAAAAAAmS5e/QAAAACZZS7/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJllLv8AAAAAmS5e/QAAAAC2Q7r5tkO6+QAAAACZLl79AAAAAJllLv8AAAAAAAAAAAAAAAAAAAAAAAAAAJllLv8AAAAAmS5e/QAAAAC2Q7r5AAAAAAAAAAC2Q7r5AAAAAJkuXv0AAAAAmWUu/wAAAAAAAAAAAAAAAJllLv8AAAAAmS5e/QAAAAC2Q7r5AAAAAAAAAAAAAAAAAAAAALZDuvkAAAAAmS5e/QAAAACZZS7/AAAAAAAAAAAAAAAAmWUu/wAAAACZLl79AAAAALZDuvm2Q7r5tkO6+bZDuvkAAAAAmS5e/QAAAACZZS7/AAAAAAAAAAAAAAAAAAAAAAAAAACZZS7/AAAAAJkuXv0AAAAAAAAAAAAAAAAAAAAAmS5e/QAAAACZZS7/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJllLv8AAAAAmS5e/ZkuXv2ZLl79mS5e/QAAAACZZS7/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJllLv8AAAAAmWUu/wAAAAAAAAAAAAAAAAAAAACZZS7/AAAAAJllLv8AAAAAAAAAAAAAAAAAAAAAAAAAAJllLv8AAAAAm+BR+QAAAACZZS7/mWUu/5llLv+ZZS7/AAAAAJvgUfkAAAAAmWUu/wAAAAAAAAAAAAAAAJllLv8AAAAAm+BR+QAAAACZZS7/AAAAACiB/Pkogfz5AAAAAJllLv8AAAAAm+BR+QAAAACZZS7/AAAAAAAAAAAAAAAAmWUu/wAAAACZZS7/AAAAACiB/PkAAAAAAAAAACiB/PkAAAAAmWUu/wAAAACZZS7/AAAAAAAAAAAAAAAAAAAAAAAAAACZZS7/AAAAACiB/PkAAAAAKIH8+SiB/PkAAAAAKIH8+QAAAACZZS7/AAAAAAAAAAAAAAAA//8AAP5/AAD9vwAA+l8AAPWvAADqVwAA1asAAKvVAADUKwAA69cAAPQvAADr1wAA1CsAAKpVAADVqwAA6lcAAA=="
+        rel="icon" type="image/x-icon" />
     <meta charset="UTF-8">
     <meta name="description" content="Mandelbrot set viewer">
     <meta name="keywords" content="JavaScript, Mandelbrot, Web">
@@ -71,7 +74,7 @@
         #contentCheckbox:checked~.settings-content {
             display: block;
             width: 12rem;
-            height: 6rem;
+            height: 9rem;
             padding-top: 0.8rem;
         }
 
@@ -88,7 +91,9 @@
             transition: opacity 0.5s;
         }
 
-        #autoCheckbox {
+        #autoCheckbox,
+        #smoothCheckbox,
+        #greyscaleCheckbox {
             background-color: rgba(240, 255, 255, 0.3);
         }
 
@@ -163,6 +168,10 @@
         </label>
         <div class="settings-content" nowrap>
             <hr>
+            <input type="checkbox" name="smoothCheckbox" id="smoothCheckbox" checked>
+            <label for="smoothCheckbox">Smooth rendering</label><br>
+            <input type="checkbox" name="greyscaleCheckbox" id="greyscaleCheckbox">
+            <label for="greyscaleCheckbox">Greyscale colors</label><br>
             <input type="checkbox" name="autoCheckbox" id="autoCheckbox" checked>
             <label for="autoCheckbox">Auto iterations</label><br>
             <label id="iterLabel" for="iterInput" nowrap>Iterations: <input id="iterInput" type="number" min="1"

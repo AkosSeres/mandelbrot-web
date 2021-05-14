@@ -31,8 +31,14 @@ class MandelbrotRenderer {
     // If set to true, the renderer figures out the number of
     // iterations needed based on the zoom level
     this.autoSetIter = true;
+    // For setting normalised (smooth) rendering
+    this.normalisedRendering = true;
+    // For setting greyscale rendering
+    this.greyscaleColors = false;
     // Set checkbox to the same value
+    document.getElementById('smoothCheckbox').checked = this.normalisedRendering;
     document.getElementById('autoCheckbox').checked = this.autoSetIter;
+    document.getElementById('greyscaleCheckbox').checked = this.greyscaleColors;
 
     /** Can drop the resolution with this to gain performance
         (setCanvasSize has to be called to take effect). Default is 1. */
@@ -109,7 +115,10 @@ class MandelbrotRenderer {
     // Load the fragment shader used to render the image
     this.renderShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
     // Load source from the static function with the right number of iterations
-    this.gl.shaderSource(this.renderShader, MandelbrotRenderer.renderShaderSrc(this.iterations));
+    this.gl.shaderSource(this.renderShader,
+      MandelbrotRenderer.renderShaderSrc(
+        this.iterations, this.greyscaleColors, this.normalisedRendering,
+      ));
     this.gl.compileShader(this.renderShader);
     // Check for errors
     if (!this.gl.getShaderParameter(this.renderShader, this.gl.COMPILE_STATUS)) {
@@ -543,19 +552,18 @@ class MandelbrotRenderer {
       this.zoomTimeoutID = false;
       // Rerender with normal resolution
       this.render();
-    }, 200);
+    }, 300);
 
     this.render();
   }
 
   /**
-   * Gets called when the user diables or enables the auto iterations setting.
+   * Gets called when the user disables or enables the auto iterations setting.
    *
    * @param {HTMLInputElement} checkBox The checkbox input element
    */
   autoClicked(checkBox) {
     this.autoSetIter = checkBox.checked;
-    console.log(this.autoSetIter);
     if (this.autoSetIter) {
       // If turned on, rerender with new auto value
       this.setAutoIterations();
@@ -564,13 +572,37 @@ class MandelbrotRenderer {
   }
 
   /**
+   * Gets called when the user disables or enables the smooth rendering option.
+   *
+   * @param {HTMLInputElement} checkBox The checkbox input element
+   */
+  smoothClicked(checkBox) {
+    this.normalisedRendering = checkBox.checked;
+    this.compileProgram();
+    this.render();
+  }
+
+  /**
+   * Gets called when the user disables or enables the greyscale colors option.
+   *
+   * @param {HTMLInputElement} checkBox The checkbox input element
+   */
+  greyscaleClicked(checkBox) {
+    this.greyscaleColors = checkBox.checked;
+    this.compileProgram();
+    this.render();
+  }
+
+  /**
    * Generates source code for the pixel shader used to render the image
    *
    * @param {number} iterations The number of iterations to have
    * @param {number} greyscale If set to true, the resulting image will be a greyscale image
+   * @param {boolean} normalised If set to true, the output color grading will be smoother
    */
-  static renderShaderSrc(iterations, greyscale = false) {
-    return `
+  static renderShaderSrc(iterations, greyscale = false, normalised = false) {
+    if (!normalised) {
+      return `
       precision highp float;
       uniform vec2 resolution;
       uniform float scaling;
@@ -628,6 +660,71 @@ class MandelbrotRenderer {
         return vec3(f5, f3, f1);
       }
       `;
+    } return `
+    precision highp float;
+    uniform vec2 resolution;
+    uniform float scaling;
+    uniform vec2 offsets;
+    
+    void iterateMandelbrot(inout float r, inout float i, float startR, float startI);
+    vec3 huetorgb(in float hue);
+    
+    void main() {
+        float unit = min(resolution.x / 1.3, resolution.y / 1.1);
+        float realStart = ((2.0 * gl_FragCoord.x / unit) - 2.0) / scaling + offsets.x;
+        float imStart = (-(2.0 * gl_FragCoord.y / unit) + 1.1) / scaling - offsets.y;
+        float real = 0.0;
+        float imaginary = 0.0;
+        const int maxIter = ${Math.round(iterations)} * 5;
+        int iter;
+        for(int i = 0;i <= maxIter;i++) {
+          iterateMandelbrot(real, imaginary, realStart, imStart);
+          iter = i;
+          if((real * real + imaginary * imaginary) > 5.0) {
+            break;
+          }
+        }
+    
+        float absSq = float(iter) / float(maxIter);
+        ${(() => {
+    if (greyscale) {
+      return `
+              if(iter == maxIter) absSq = 0.0;
+              absSq = sqrt(absSq);
+              gl_FragColor = vec4(absSq, absSq, absSq, 1.0);
+              `;
+    }
+    return `
+              if(iter == maxIter) {
+                gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+              }
+              else {
+                vec3 color = huetorgb(absSq * 15.0);
+                gl_FragColor = vec4(color, 1.0);
+              }
+              `;
+  })()
+}
+    }
+    
+    void iterateMandelbrot(inout float r, inout float i, float startR, float startI){
+        float oldR = r;
+        r = r * r - i * i + startR;
+        i = 2.0 * oldR * i + startI;
+    }
+
+    // Function to convert a hue value to rgb with 1.0 saturation and 0.0 brightness
+    // Implemented based on a wikipedia article
+    vec3 huetorgb(in float hue){
+      float k5 = mod(5.0 + hue, 6.0);
+      float k3 = mod(3.0 + hue, 6.0);
+      float k1 = mod(1.0 + hue, 6.0);
+      float f5 = 1.0 - max(0.0, min(min(k5, 4.0 - k5), 1.0));
+      float f3 = 1.0 - max(0.0, min(min(k3, 4.0 - k3), 1.0));
+      float f1 = 1.0 - max(0.0, min(min(k1, 4.0 - k1), 1.0));
+      return vec3(f5, f3, f1);
+    }
+    `;
   }
 }
 
@@ -677,6 +774,12 @@ function exportImage() {
 // Set event listeners for the input elements
 document.getElementById('autoCheckbox').onclick = function () {
   renderer.autoClicked(this);
+};
+document.getElementById('smoothCheckbox').onclick = function () {
+  renderer.smoothClicked(this);
+};
+document.getElementById('greyscaleCheckbox').onclick = function () {
+  renderer.greyscaleClicked(this);
 };
 document.getElementById('iterInput').onchange = function () {
   renderer.iterationsChanged(this);
